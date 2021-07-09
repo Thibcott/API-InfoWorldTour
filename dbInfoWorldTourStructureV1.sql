@@ -33,4 +33,6 @@ VALUES (
 'ExmpleUser');
 
 insert INTO tblMessage(mesText,mesUser,mesDate)
-values("creation de la db v1","DBInsertUser",GETDATE());
+values( "creation de la db v1",
+		    "DBInsertUser",
+        now());
