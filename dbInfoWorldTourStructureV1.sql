@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS `dbInfoWorldTour`.`tblvoyage` (
   `voyId` INT(11) NOT NULL AUTO_INCREMENT,
   `voyData` longtext NULL DEFAULT NULL,
   `voyUser` VARCHAR(255) NULL DEFAULT NULL,
+  `voyDate` VARCHAR(255)  NULL DEFAULT NULL,
+
   PRIMARY KEY (`voyId`));
   
 
@@ -16,10 +18,8 @@ CREATE TABLE IF NOT EXISTS `dbInfoWorldTour`.`tblmessage` (
   `mesDate` VARCHAR(255) NULL DEFAULT NULL,
   PRIMARY KEY (`mesId`));
 
-
-INSERT INTO tblVoyage (voyData, voyUser)
-VALUES (
-'{   
+INSERT INTO `tblVoyage` (`voyData`,`voyUser`,`voyDate`)
+VALUES ('{   
     "Ville":"",
     "Pays":"",
     "HeureLocal":"",
@@ -30,7 +30,10 @@ VALUES (
     "NbrJours":"",
     "Divers":""
 }',
-'ExmpleUser');
+'ExmpleUser',
+now());
+
+
 
 insert INTO tblMessage(mesText,mesUser,mesDate)
 values( "creation de la db v1",
