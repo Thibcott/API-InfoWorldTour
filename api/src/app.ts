@@ -119,6 +119,43 @@ app.post('/postMessage/', function (req: Request, response: Response) {
     );
 });
 
+//POST ajouter des donner dans la tblvoyage
+app.post('/postDataTravel/', function (req: Request, response: Response) {
+    let voyageJSON = {
+        "Ville":req.body.data.Ville,
+        "Pays":req.body.data.Pays,
+        "NomHebergement":req.body.data.NomHebergement,
+        "TelHebergement":req.body.data.TelHebergement,
+        "DateArriver":req.body.data.DateArriver,
+        "DateDepart":req.body.data.DateDepart,
+        "Divers":req.body.data.Divers
+    }
+    console.log(voyageJSON)
+
+    let data = {
+        voyage: JSON.stringify(voyageJSON),
+        user: req.body.user,
+        date: getDate()
+    }
+    // requete envoyer a la db
+    connection.query(
+        'insert into tblVoyage (voyData, voyUser, voyDate) values(?,?,?)',
+        [
+            data.voyage,
+            data.user,
+            data.date
+        ],
+
+        function (err, result) {
+            if (err) {
+                response.status(500).send("the message are not add to the db ");
+            } else {
+                response.status(201).send(req.body);
+            }
+        }
+    );
+});
+
 //lancement de l api 
 app.listen(port, () => {
     console.log('App server up...');
