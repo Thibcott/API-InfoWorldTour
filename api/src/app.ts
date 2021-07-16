@@ -9,18 +9,17 @@ import { config as dotenvConfig } from 'dotenv';
 dotenvConfig();
 
 //parametre pour la connection a la base de données
-
 const connection = createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_DBNAME
-});
+});  
 
-const port = 3000;//port de l'api
+const port = process.env.SERVER_PORT;//port de l'api
 
 //cors
-const allowedOrigins = ['http://localhost'];
+const allowedOrigins = [process.env.SERVER_HOST];
 
 const options: cors.CorsOptions = {
     origin: allowedOrigins,
