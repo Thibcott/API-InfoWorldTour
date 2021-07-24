@@ -4,22 +4,37 @@ import express from 'express';
 import fs from 'fs';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import { createConnection } from "mysql";
+import {createConnection} from "mysql";
+import {auth} from 'express-openid-connect';
 import { config as dotenvConfig } from 'dotenv';
+import {requiresAuth} from 'express-openid-connect';
+
+import {resolve} from "dns";
 dotenvConfig();
+
+//auth0 config
+const config = {
+    authRequired: false,
+    auth0Logout: true,
+    secret: process.env.AUTH0_SECRET,//'a long, randomly-generated string stored in env',
+    baseURL: 'http://localhost:3000',
+    clientID: process.env.AUTH0_CLIENTID,//'2uDUJsvrZa2HXV55DVrGSne1k4RXJJNa',
+    issuerBaseURL: 'https://dev-thibcott.eu.auth0.com'
+};
+
 
 //parametre pour la connection a la base de données
 const connection = createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_DBNAME
-});  
+    host     : process.env.DB_HOST,
+    user     : process.env.DB_USER,
+    password : process.env.DB_PASS,
+    database : process.env.DB_DBNAME
+});
 
 const port = process.env.SERVER_PORT;//port de l'api
 
 //cors
-const allowedOrigins = [process.env.SERVER_HOST];
+const allowedOrigins = ['http://localhost']; /*process.env.SERVER_HOST*/
 
 const options: cors.CorsOptions = {
     origin: allowedOrigins,
@@ -30,13 +45,18 @@ const options: cors.CorsOptions = {
 //instentation de l api express
 const app = express();
 app.use(express.json());
-//app.use();
 app.use(cors(options));
+app.use(auth(config));
 
-//GET default 
-app.get('/', function (req: Request, response: Response) {
-    console.log("it works");
-    response.send("it works");
+app.get('/', (req: Request, res: Response) => {
+    res.send(req.oidc.isAuthenticated() ? 'Logged in' : 'Logged out');
+});
+
+app.get('/callback', requiresAuth(), (req: Request, response: Response) => {
+    response.send("Salut");
+});
+app.get('/profile', requiresAuth(), (req: Request, response: Response) => {
+    response.send(JSON.stringify(req.oidc.user));
 });
 
 //pour recupere la date du jour 
@@ -53,19 +73,17 @@ function getDate() {
         d.getMinutes() +
         ":" +
         d.getSeconds();
-    // console.log(date);
     return date;
 }
 
 // GET dateDuJour
-app.get('/dateDuJour/', function (req: Request, response: Response) {
-    //console.log(getDate());
+app.get('/dateDuJour/',/*requiresAuth(),*/ function (req: Request, response: Response) {
     let date = getDate().toString()
     response.send({ "date": date });
 });
 
 //GET db en fonction de la table  
-app.get('/getMessage/', function (req: Request, response: Response) {
+app.get('/getMessages/', requiresAuth(), function (req: Request, response: Response) {
 
     //requete envoyer a la base de données
     connection.query('select * from tblMessage', function (err, rows, fields) {
@@ -78,7 +96,7 @@ app.get('/getMessage/', function (req: Request, response: Response) {
 });
 
 //GET db en fonction de la table  
-app.get('/getDataTravel/', function (req: Request, response: Response) {
+app.get('/getDataTravel/', requiresAuth(), function (req: Request, response: Response) {
 
     //requete envoyer a la base de données
     connection.query('select * from tblVoyage', function (err, rows, fields) {
@@ -91,7 +109,7 @@ app.get('/getDataTravel/', function (req: Request, response: Response) {
 });
 
 // POST Ajouter un nouveau train dans la db 
-app.post('/postMessage/', function (req: Request, response: Response) {
+app.post('/postMessage/', requiresAuth(), function (req: Request, response: Response) {
 
     let message = {
         text: req.body.text,
@@ -119,7 +137,7 @@ app.post('/postMessage/', function (req: Request, response: Response) {
 });
 
 //POST ajouter des donner dans la tblvoyage
-app.post('/postDataTravel/', function (req: Request, response: Response) {
+app.post('/postDataTravel/', requiresAuth(),function (req: Request, response: Response) {
     let voyageJSON = {
         "Ville":req.body.data.Ville,
         "Pays":req.body.data.Pays,
