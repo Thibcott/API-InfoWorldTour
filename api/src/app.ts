@@ -16,9 +16,9 @@ dotenvConfig();
 const config = {
     authRequired: false,
     auth0Logout: true,
-    secret: process.env.AUTH0_SECRET,//'a long, randomly-generated string stored in env',
+    secret: process.env.AUTH0_SECRET,
     baseURL: 'http://localhost:3000',
-    clientID: process.env.AUTH0_CLIENTID,//'2uDUJsvrZa2HXV55DVrGSne1k4RXJJNa',
+    clientID: process.env.AUTH0_CLIENTID,
     issuerBaseURL: 'https://dev-thibcott.eu.auth0.com'
 };
 
