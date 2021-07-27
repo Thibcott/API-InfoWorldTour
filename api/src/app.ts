@@ -1,12 +1,15 @@
 //importation des modules
-import { Request, Response } from "express";
+import { NextFunction, Request, response, Response } from "express";
 import express from 'express';
 import fs from 'fs';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import { createConnection } from "mysql";
+const jwt = require('jsonwebtoken');
+
 import { config as dotenvConfig } from 'dotenv';
 dotenvConfig();
+
 
 //parametre pour la connection a la base de données
 const connection = createConnection({
@@ -30,6 +33,8 @@ const options: cors.CorsOptions = {
 //instentation de l api express
 const app = express();
 app.use(express.json());
+app.use(bodyParser.json());
+
 //app.use();
 app.use(cors(options));
 
@@ -38,6 +43,8 @@ app.get('/', function (req: Request, response: Response) {
     console.log("it works");
     response.send("it works");
 });
+
+var t:string = ""
 
 //pour recupere la date du jour 
 function getDate() {
@@ -64,8 +71,62 @@ app.get('/dateDuJour/', function (req: Request, response: Response) {
     response.send({ "date": date });
 });
 
+
+//test login
+
+const accessTokenSecret =  process.env.TOKEN_SECRET;
+
+const users = [
+    {
+        username:"thibaut",
+        password:"mdp",
+        role:"admin"
+    }
+];
+
+
+app.post('/login', (req:Request, res:Response) => {
+    // Read username and password from request body
+    const { username, password } = req.body;
+
+    // Filter user from the users array by username and password
+    const user = users.find(u => { return u.username === username && u.password === password });
+
+    if (user) {
+        // Generate an access token
+        const accessToken = jwt.sign({ username: user.username,  role: user.role }, accessTokenSecret);
+        // console.log("post : "+accessToken);
+        res.json({
+            accessToken
+        });
+    } else {
+        res.send('Username or password incorrect');
+    }
+});
+const authenticateJWT = (req:any, res:any, next:any) => {
+    const authHeader = req.headers.authorization;
+    // console.log("authenticateJWT : " + authHeader);
+
+    if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        jwt.verify(token, accessTokenSecret, (err:any, user:any) => {
+            if (err) {
+                return res.sendStatus(403);
+            }
+
+            req.user = user;
+            next();
+        });
+    } else {
+        res.sendStatus(401);
+    }
+};
+// app.get('/books', authenticateJWT, (req, res) => {
+//     res.json(books);
+// });
+
 //GET db en fonction de la table  
-app.get('/getMessage/', function (req: Request, response: Response) {
+app.get('/getMessage/',authenticateJWT, function (req: Request, response: Response) {
 
     //requete envoyer a la base de données
     connection.query('select * from tblMessage', function (err, rows, fields) {
@@ -78,7 +139,7 @@ app.get('/getMessage/', function (req: Request, response: Response) {
 });
 
 //GET db en fonction de la table  
-app.get('/getDataTravel/', function (req: Request, response: Response) {
+app.get('/getDataTravel/',authenticateJWT, function (req: Request, response: Response) {
 
     //requete envoyer a la base de données
     connection.query('select * from tblVoyage', function (err, rows, fields) {
@@ -91,7 +152,7 @@ app.get('/getDataTravel/', function (req: Request, response: Response) {
 });
 
 // POST Ajouter un nouveau train dans la db 
-app.post('/postMessage/', function (req: Request, response: Response) {
+app.post('/postMessage/',authenticateJWT, function (req: Request, response: Response) {
 
     let message = {
         text: req.body.text,
@@ -119,7 +180,7 @@ app.post('/postMessage/', function (req: Request, response: Response) {
 });
 
 //POST ajouter des donner dans la tblvoyage
-app.post('/postDataTravel/', function (req: Request, response: Response) {
+app.post('/postDataTravel/',authenticateJWT, function (req: Request, response: Response) {
     let voyageJSON = {
         "Ville":req.body.data.Ville,
         "Pays":req.body.data.Pays,
