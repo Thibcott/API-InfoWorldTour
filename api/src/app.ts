@@ -5,7 +5,9 @@ import fs from 'fs';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import { createConnection } from "mysql";
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
+var simplecrypt = require("simplecrypt");
+
 
 import { config as dotenvConfig } from 'dotenv';
 dotenvConfig();
@@ -22,7 +24,7 @@ const connection = createConnection({
 const port = process.env.SERVER_PORT;//port de l'api
 
 //cors
-const allowedOrigins = [process.env.SERVER_HOST];
+const allowedOrigins = ['http://localhost'/*process.env.SERVER_HOST*/];
 
 const options: cors.CorsOptions = {
     origin: allowedOrigins,
@@ -44,7 +46,7 @@ app.get('/', function (req: Request, response: Response) {
     response.send("it works");
 });
 
-var t:string = ""
+var sc = simplecrypt();
 
 //pour recupere la date du jour 
 function getDate() {
@@ -73,31 +75,48 @@ app.get('/dateDuJour/', function (req: Request, response: Response) {
 
 
 //test login
-
 const accessTokenSecret =  process.env.TOKEN_SECRET;
 
 const users = [
     {
-        username:"thibaut",
+        username:"writer ",
+        password:"mdp",
+        role:"write"
+    },
+    {
+        username:"viewer",
+        password:"mdp",
+        role:"view"
+    },
+    ,
+    {
+        username:"admin",
         password:"mdp",
         role:"admin"
     }
 ];
 
 
+
 app.post('/login', (req:Request, res:Response) => {
     // Read username and password from request body
     const { username, password } = req.body;
-
     // Filter user from the users array by username and password
-    const user = users.find(u => { return u.username === username && u.password === password });
-
+    let user:any;
+    users.forEach(element=>{
+        //console.log(element)
+        if(element.username == username && element.password == password) {
+            //console.log("role: " + element.role)
+             user = element;
+        }
+    });
+    console.log("user 107 :"+user.role);
     if (user) {
         // Generate an access token
         const accessToken = jwt.sign({ username: user.username,  role: user.role }, accessTokenSecret);
-        // console.log("post : "+accessToken);
         res.json({
-            accessToken
+            accessToken,
+            "role":user.role
         });
     } else {
         res.send('Username or password incorrect');
@@ -113,7 +132,6 @@ const authenticateJWT = (req:any, res:any, next:any) => {
             if (err) {
                 return res.sendStatus(403);
             }
-
             req.user = user;
             next();
         });
@@ -121,9 +139,7 @@ const authenticateJWT = (req:any, res:any, next:any) => {
         res.sendStatus(401);
     }
 };
-// app.get('/books', authenticateJWT, (req, res) => {
-//     res.json(books);
-// });
+
 
 //GET db en fonction de la table  
 app.get('/getMessage/',authenticateJWT, function (req: Request, response: Response) {
@@ -138,6 +154,7 @@ app.get('/getMessage/',authenticateJWT, function (req: Request, response: Respon
     });
 });
 
+
 //GET db en fonction de la table  
 app.get('/getDataTravel/',authenticateJWT, function (req: Request, response: Response) {
 
@@ -151,7 +168,20 @@ app.get('/getDataTravel/',authenticateJWT, function (req: Request, response: Res
     });
 });
 
-// POST Ajouter un nouveau train dans la db 
+//GET db en fonction de la table
+app.get('/getUser/'/*,authenticateJWT*/, function (req: Request, response: Response) {
+
+    //requete envoyer a la base de données
+    connection.query('select * from tblUser', function (err, rows, fields) {
+        if (err) {
+            response.status(500).send("the connection to db don t works");
+            console.log(err);
+        };
+        response.send(JSON.stringify(rows));
+    });
+});
+
+// POST Ajouter un nouveau messafe dans la db
 app.post('/postMessage/',authenticateJWT, function (req: Request, response: Response) {
 
     let message = {
@@ -204,6 +234,35 @@ app.post('/postDataTravel/',authenticateJWT, function (req: Request, response: R
             data.voyage,
             data.user,
             data.date
+        ],
+
+        function (err, result) {
+            if (err) {
+                response.status(500).send("the message are not add to the db ");
+            } else {
+                response.status(201).send(req.body);
+            }
+        }
+    );
+});
+
+
+
+app.post('/postUser/',authenticateJWT, function (req: Request, response: Response) {
+
+    let user = {
+        name: req.body.name,
+        password: req.body.password,
+        role:req.body.role,
+    }
+    console.log(user)
+    // requete envoyer a la db
+    connection.query(
+        'insert into tbluser (useName,usePassword,useRole) values(?,?,?)',
+        [
+            user.name,
+            user.password,
+            user.role
         ],
 
         function (err, result) {
