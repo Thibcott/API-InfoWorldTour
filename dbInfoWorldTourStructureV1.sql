@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS `dbInfoWorldTour`.`tblmessage` (
   `mesDate` VARCHAR(255) NULL DEFAULT NULL,
   PRIMARY KEY (`mesId`));
 
+ CREATE TABLE IF NOT EXISTS `dbInfoWorldTour`.`tbluser` (
+    `useId` INT(11) NOT NULL AUTO_INCREMENT,
+    `useName` VARCHAR(255) not NULL,
+    `usePassword` VARCHAR(255) not NULL ,
+    `userole` VARCHAR(255) NULL DEFAULT NULL,
+ PRIMARY KEY (`useId`));
+
+
 INSERT INTO `tblVoyage` (`voyData`,`voyUser`,`voyDate`)
 VALUES ('{   
     "Ville":"",
