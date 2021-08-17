@@ -1,17 +1,12 @@
 //importation des modules
-import { NextFunction, Request, response, Response } from "express";
-import express from 'express';
-import fs from 'fs';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import { createConnection } from "mysql";
-import jwt from 'jsonwebtoken';
-var simplecrypt = require("simplecrypt");
-
-
 import { config as dotenvConfig } from 'dotenv';
-dotenvConfig();
+import express, { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { createConnection } from "mysql";
 
+dotenvConfig();
 
 //parametre pour la connection a la base de données
 const connection = createConnection({
@@ -28,8 +23,8 @@ const allowedOrigins = ['http://localhost'/*process.env.SERVER_HOST*/];
 
 const options: cors.CorsOptions = {
     origin: allowedOrigins,
-    methods: "DELETE,GET,POST,PUT",
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods:"DELETE,GET,POST,PUT",
+    allowedHeaders : ['Content-Type', 'Authorization'],
 };
 
 //instentation de l api express
@@ -46,7 +41,6 @@ app.get('/', function (req: Request, response: Response) {
     response.send("it works");
 });
 
-var sc = simplecrypt();
 
 //pour recupere la date du jour 
 function getDate() {
@@ -64,6 +58,20 @@ function getDate() {
         d.getSeconds();
     // console.log(date);
     return date;
+
+}
+  function getUsers() {
+
+    //requete envoyer a la base de données
+    connection.query('select * from tblUser', function (err, rows, fields) {
+        if (err) {
+            console.log("the connection to db don t works");
+            console.log(err);
+        };
+        var users = rows;
+    });
+    console.log("getusers  : "+JSON.stringify(users))
+    return(JSON.stringify(users));
 }
 
 // GET dateDuJour
@@ -74,8 +82,10 @@ app.get('/dateDuJour/', function (req: Request, response: Response) {
 });
 
 
+
 //test login
 const accessTokenSecret =  process.env.TOKEN_SECRET;
+
 
 const users = [
     {
@@ -110,7 +120,7 @@ app.post('/login', (req:Request, res:Response) => {
              user = element;
         }
     });
-    console.log("user 107 :"+user.role);
+    console.log("user : "+user.role);
     if (user) {
         // Generate an access token
         const accessToken = jwt.sign({ username: user.username,  role: user.role }, accessTokenSecret);
@@ -122,6 +132,7 @@ app.post('/login', (req:Request, res:Response) => {
         res.send('Username or password incorrect');
     }
 });
+
 const authenticateJWT = (req:any, res:any, next:any) => {
     const authHeader = req.headers.authorization;
     // console.log("authenticateJWT : " + authHeader);
@@ -139,6 +150,12 @@ const authenticateJWT = (req:any, res:any, next:any) => {
         res.sendStatus(401);
     }
 };
+
+//GET db en fonction de la table
+app.get('/getUsers/',authenticateJWT, function (req: Request, response: Response) {
+    console.log("GET getUsers : " + getUsers());
+    response.send();
+});
 
 
 //GET db en fonction de la table  
@@ -168,18 +185,6 @@ app.get('/getDataTravel/',authenticateJWT, function (req: Request, response: Res
     });
 });
 
-//GET db en fonction de la table
-app.get('/getUser/'/*,authenticateJWT*/, function (req: Request, response: Response) {
-
-    //requete envoyer a la base de données
-    connection.query('select * from tblUser', function (err, rows, fields) {
-        if (err) {
-            response.status(500).send("the connection to db don t works");
-            console.log(err);
-        };
-        response.send(JSON.stringify(rows));
-    });
-});
 
 // POST Ajouter un nouveau messafe dans la db
 app.post('/postMessage/',authenticateJWT, function (req: Request, response: Response) {
