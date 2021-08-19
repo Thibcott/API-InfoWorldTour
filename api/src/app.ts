@@ -14,7 +14,7 @@ const connection = createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_DBNAME
-});  
+});
 
 const port = process.env.SERVER_PORT;//port de l'api
 
@@ -23,8 +23,8 @@ const allowedOrigins = ['http://localhost'/*process.env.SERVER_HOST*/];
 
 const options: cors.CorsOptions = {
     origin: allowedOrigins,
-    methods:"DELETE,GET,POST,PUT",
-    allowedHeaders : ['Content-Type', 'Authorization'],
+    methods: "DELETE,GET,POST,PUT",
+    allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 //instentation de l api express
@@ -40,7 +40,6 @@ app.get('/', function (req: Request, response: Response) {
     console.log("it works");
     response.send("it works");
 });
-
 
 //pour recupere la date du jour 
 function getDate() {
@@ -58,20 +57,16 @@ function getDate() {
         d.getSeconds();
     // console.log(date);
     return date;
-
 }
-  function getUsers() {
-
-    //requete envoyer a la base de données
-    connection.query('select * from tblUser', function (err, rows, fields) {
-        if (err) {
-            console.log("the connection to db don t works");
-            console.log(err);
-        };
-        var users = rows;
+async function getUsers() {
+    return new Promise((resolve, reject) => {
+        connection.query('select * from tblUser', (err, rows, fields) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(rows)
+        });
     });
-    console.log("getusers  : "+JSON.stringify(users))
-    return(JSON.stringify(users));
 }
 
 // GET dateDuJour
@@ -81,65 +76,51 @@ app.get('/dateDuJour/', function (req: Request, response: Response) {
     response.send({ "date": date });
 });
 
-
-
 //test login
-const accessTokenSecret =  process.env.TOKEN_SECRET;
+const accessTokenSecret = process.env.TOKEN_SECRET;
 
+let users: string = "";
 
-const users = [
-    {
-        username:"writer ",
-        password:"mdp",
-        role:"write"
-    },
-    {
-        username:"viewer",
-        password:"mdp",
-        role:"view"
-    },
-    ,
-    {
-        username:"admin",
-        password:"mdp",
-        role:"admin"
-    }
-];
-
-
-
-app.post('/login', (req:Request, res:Response) => {
-    // Read username and password from request body
-    const { username, password } = req.body;
-    // Filter user from the users array by username and password
-    let user:any;
-    users.forEach(element=>{
-        //console.log(element)
-        if(element.username == username && element.password == password) {
-            //console.log("role: " + element.role)
-             user = element;
-        }
-    });
-    console.log("user : "+user.role);
-    if (user) {
-        // Generate an access token
-        const accessToken = jwt.sign({ username: user.username,  role: user.role }, accessTokenSecret);
-        res.json({
-            accessToken,
-            "role":user.role
+app.post('/login', (req: Request, res: Response) => {
+    console.log(getUsers());
+    getUsers().then((d) => {
+        //-console.log(d)
+        users = JSON.stringify(d)
+        //-console.log(users)
+        // Read username and password from request body
+        const { username, password } = req.body;
+        // Filter user from the users array by username and password
+        let user: any;
+        JSON.parse(users).forEach((element: { useName: any; usePassword: any; }) => {
+            if (element.useName == username && element.usePassword == password) {
+                user = element;
+                console.log(user)
+            }
         });
-    } else {
-        res.send('Username or password incorrect');
-    }
+        console.log("user : " + user.userole);
+        if (user) {
+            // Generate an access token
+            const accessToken = jwt.sign({ username: user.username, role: user.role }, accessTokenSecret);
+            res.json({
+                accessToken,
+                "role": user.userole
+            });
+        } else {
+            res.send('Username or password incorrect');
+        }
+    }).catch((err) => {
+        console.log(err)
+    })
+
 });
 
-const authenticateJWT = (req:any, res:any, next:any) => {
+const authenticateJWT = (req: any, res: any, next: any) => {
     const authHeader = req.headers.authorization;
     // console.log("authenticateJWT : " + authHeader);
 
     if (authHeader) {
         const token = authHeader.split(' ')[1];
-        jwt.verify(token, accessTokenSecret, (err:any, user:any) => {
+        jwt.verify(token, accessTokenSecret, (err: any, user: any) => {
             if (err) {
                 return res.sendStatus(403);
             }
@@ -152,14 +133,19 @@ const authenticateJWT = (req:any, res:any, next:any) => {
 };
 
 //GET db en fonction de la table
-app.get('/getUsers/',authenticateJWT, function (req: Request, response: Response) {
-    console.log("GET getUsers : " + getUsers());
-    response.send();
+app.get('/getUsers/', authenticateJWT, function (req: Request, response: Response) {
+    console.log(getUsers());
+    getUsers().then((d) => {
+        console.log(d)
+        response.send();
+    }).catch((err) => {
+        response.send(err)
+    })
 });
 
 
 //GET db en fonction de la table  
-app.get('/getMessage/',authenticateJWT, function (req: Request, response: Response) {
+app.get('/getMessage/', authenticateJWT, function (req: Request, response: Response) {
 
     //requete envoyer a la base de données
     connection.query('select * from tblMessage', function (err, rows, fields) {
@@ -173,7 +159,7 @@ app.get('/getMessage/',authenticateJWT, function (req: Request, response: Respon
 
 
 //GET db en fonction de la table  
-app.get('/getDataTravel/',authenticateJWT, function (req: Request, response: Response) {
+app.get('/getDataTravel/', authenticateJWT, function (req: Request, response: Response) {
 
     //requete envoyer a la base de données
     connection.query('select * from tblVoyage', function (err, rows, fields) {
@@ -187,7 +173,7 @@ app.get('/getDataTravel/',authenticateJWT, function (req: Request, response: Res
 
 
 // POST Ajouter un nouveau messafe dans la db
-app.post('/postMessage/',authenticateJWT, function (req: Request, response: Response) {
+app.post('/postMessage/', authenticateJWT, function (req: Request, response: Response) {
 
     let message = {
         text: req.body.text,
@@ -215,15 +201,15 @@ app.post('/postMessage/',authenticateJWT, function (req: Request, response: Resp
 });
 
 //POST ajouter des donner dans la tblvoyage
-app.post('/postDataTravel/',authenticateJWT, function (req: Request, response: Response) {
+app.post('/postDataTravel/', authenticateJWT, function (req: Request, response: Response) {
     let voyageJSON = {
-        "Ville":req.body.data.Ville,
-        "Pays":req.body.data.Pays,
-        "NomHebergement":req.body.data.NomHebergement,
-        "TelHebergement":req.body.data.TelHebergement,
-        "DateArriver":req.body.data.DateArriver,
-        "DateDepart":req.body.data.DateDepart,
-        "Divers":req.body.data.Divers
+        "Ville": req.body.data.Ville,
+        "Pays": req.body.data.Pays,
+        "NomHebergement": req.body.data.NomHebergement,
+        "TelHebergement": req.body.data.TelHebergement,
+        "DateArriver": req.body.data.DateArriver,
+        "DateDepart": req.body.data.DateDepart,
+        "Divers": req.body.data.Divers
     }
     console.log(voyageJSON)
 
@@ -253,12 +239,12 @@ app.post('/postDataTravel/',authenticateJWT, function (req: Request, response: R
 
 
 
-app.post('/postUser/',authenticateJWT, function (req: Request, response: Response) {
+app.post('/postUser/', authenticateJWT, function (req: Request, response: Response) {
 
     let user = {
         name: req.body.name,
         password: req.body.password,
-        role:req.body.role,
+        role: req.body.role,
     }
     console.log(user)
     // requete envoyer a la db
