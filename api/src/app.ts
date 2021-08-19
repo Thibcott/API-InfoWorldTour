@@ -1,5 +1,6 @@
 //importation des modules
 import bodyParser from 'body-parser';
+import { Console } from 'console';
 import cors from 'cors';
 import { config as dotenvConfig } from 'dotenv';
 import express, { Request, Response } from 'express';
@@ -79,9 +80,10 @@ app.get('/dateDuJour/', function (req: Request, response: Response) {
 //test login
 const accessTokenSecret = process.env.TOKEN_SECRET;
 
-let users: string = "";
+
 
 app.post('/login', (req: Request, res: Response) => {
+    let users: string = "";
     console.log(getUsers());
     getUsers().then((d) => {
         //-console.log(d)
@@ -134,10 +136,21 @@ const authenticateJWT = (req: any, res: any, next: any) => {
 
 //GET db en fonction de la table
 app.get('/getUsers/', authenticateJWT, function (req: Request, response: Response) {
-    console.log(getUsers());
+    let users:string = "";
+    let tabUsers;
+    let aff:string="";
     getUsers().then((d) => {
-        console.log(d)
-        response.send();
+        //console.log(d)
+        users = JSON.stringify(d)
+        tabUsers = JSON.parse(users);
+        //console.log(tabUsers)
+
+        for (let index = 0; index < tabUsers.length; index++) {
+            tabUsers[index].usePassword="";
+            const element = tabUsers[index];
+            console.log(element)  
+        }
+        response.send(tabUsers);
     }).catch((err) => {
         response.send(err)
     })
