@@ -84,7 +84,6 @@ const accessTokenSecret = process.env.TOKEN_SECRET;
 
 app.post('/login', (req: Request, res: Response) => {
     let users: string = "";
-    console.log(getUsers());
     getUsers().then((d) => {
         //-console.log(d)
         users = JSON.stringify(d)
@@ -94,18 +93,19 @@ app.post('/login', (req: Request, res: Response) => {
         // Filter user from the users array by username and password
         let user: any;
         JSON.parse(users).forEach((element: { useName: any; usePassword: any; }) => {
-            if (element.useName == username && element.usePassword == password) {
+            if (element.useName === username && element.usePassword === password) {
                 user = element;
                 console.log(user)
             }
         });
-        console.log("user : " + user.userole);
+
         if (user) {
             // Generate an access token
-            const accessToken = jwt.sign({ username: user.username, role: user.role }, accessTokenSecret);
+            const accessToken = jwt.sign({ username: user.useName, role: user.userole }, accessTokenSecret, {
+                expiresIn: '1h'
+            });
             res.json({
-                accessToken,
-                "role": user.userole
+                accessToken
             });
         } else {
             res.send('Username or password incorrect');
@@ -136,23 +136,17 @@ const authenticateJWT = (req: any, res: any, next: any) => {
 
 //GET db en fonction de la table
 app.get('/getUsers/', authenticateJWT, function (req: Request, response: Response) {
-    let users:string = "";
-    let tabUsers;
-    let aff:string="";
-    getUsers().then((d) => {
+    getUsers().then((d: Array<{ useId: number, useName: string, userole: string}>) => {
         //console.log(d)
-        users = JSON.stringify(d)
-        tabUsers = JSON.parse(users);
         //console.log(tabUsers)
+        // remove usePassword param from users array
+        d = d.map(({useId, useName, userole}) => {
+            return { useId, useName, userole }
+        });
 
-        for (let index = 0; index < tabUsers.length; index++) {
-            tabUsers[index].usePassword="";
-            const element = tabUsers[index];
-            console.log(element)  
-        }
-        response.send(tabUsers);
+        response.json(d);
     }).catch((err) => {
-        response.send(err)
+        response.status(500).send("Internal Server Error");
     })
 });
 
@@ -166,7 +160,7 @@ app.get('/getMessage/', authenticateJWT, function (req: Request, response: Respo
             response.status(500).send("the connection to db don t works");
             console.log(err);
         };
-        response.send(JSON.stringify(rows));
+        response.json(rows);
     });
 });
 
@@ -180,7 +174,7 @@ app.get('/getDataTravel/', authenticateJWT, function (req: Request, response: Re
             response.status(500).send("the connection to db don t works");
             console.log(err);
         };
-        response.send(JSON.stringify(rows));
+        response.json(rows);
     });
 });
 
@@ -285,4 +279,3 @@ app.listen(port, () => {
     //connection a la base de données
     connection.connect();
 });
-
